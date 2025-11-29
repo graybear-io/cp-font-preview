@@ -34,12 +34,27 @@ class FontPreview:
 
     def create_display(self):
         """Create the pygame display and displayio groups."""
+        print(f"DEBUG: Creating display {self.width}x{self.height}")
         self.display = PyGameDisplay(width=self.width, height=self.height)
+        self.display.auto_refresh = True
+        print(f"DEBUG: auto_refresh enabled")
+
+        # Create a colored background to test if anything renders
+        import displayio
+        color_bitmap = displayio.Bitmap(self.width, self.height, 1)
+        color_palette = displayio.Palette(1)
+        color_palette[0] = 0x222222  # Dark gray background
+        bg_sprite = displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
+
         self.main_group = displayio.Group()
+        self.main_group.append(bg_sprite)
+        print(f"DEBUG: Background added")
 
         # Load the font
+        print(f"DEBUG: Loading font from {self.font_path}")
         try:
             font = bitmap_font.load_font(str(self.font_path))
+            print(f"DEBUG: Font loaded successfully")
         except Exception as e:
             print(f"Error loading font: {e}")
             return False
@@ -48,11 +63,19 @@ class FontPreview:
         title_text = (
             f"{self.font_info['font_family']} - {self.font_info['character_count']} characters"
         )
-        title = label.Label(font, text=title_text, color=0xFFFFFF, scale=1)
-        title.x = 10
-        title.y = 15
-        if self.main_group is not None:
-            self.main_group.append(title)
+        print(f"DEBUG: Creating title: {title_text}")
+        try:
+            title = label.Label(font, text=title_text, color=0xFFFFFF, scale=1)
+            title.x = 10
+            title.y = 15
+            print(f"DEBUG: Title label created at ({title.x}, {title.y}), text='{title.text}'")
+            if self.main_group is not None:
+                self.main_group.append(title)
+                print(f"DEBUG: Title added to group, group now has {len(self.main_group)} items")
+        except Exception as e:
+            print(f"ERROR creating title label: {e}")
+            import traceback
+            traceback.print_exc()
 
         # Display characters in a grid
         chars_per_row = 16
@@ -60,6 +83,7 @@ class FontPreview:
         y_spacing = 40
         start_y = 50
 
+        print(f"DEBUG: Rendering {len(self.characters)} characters: {self.characters}")
         for i, char in enumerate(self.characters):
             if char == "\n":  # Skip newlines
                 continue
@@ -86,7 +110,11 @@ class FontPreview:
                 continue
 
         if self.display is not None and self.main_group is not None:
+            print(f"DEBUG: Setting root_group with {len(self.main_group)} items")
             self.display.root_group = self.main_group
+            print(f"DEBUG: Calling refresh()...")
+            self.display.refresh()
+            print(f"DEBUG: Display refreshed and setup complete")
         return True
 
     def run(self, watch_callback=None):
@@ -114,6 +142,10 @@ class FontPreview:
                 self.main_group = None
                 if not self.create_display():
                     break
+
+            # Refresh display
+            if self.display is not None:
+                self.display.refresh()
 
             time.sleep(0.01)
 
