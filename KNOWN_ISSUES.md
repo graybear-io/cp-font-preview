@@ -21,6 +21,8 @@ dependencies = [
 ```
 
 **References**:
+- Upstream issue: https://github.com/FoamyGuy/Blinka_Displayio_PyGameDisplay/issues/26
+- Our tracking issue: https://github.com/graybear-io/cp-font-preview/issues/1
 - PyPI package: https://pypi.org/project/blinka-displayio-pygamedisplay/
 - GitHub repository: https://github.com/FoamyGuy/Blinka_Displayio_PyGameDisplay
 - NumPy deprecation docs: https://numpy.org/doc/2.1/reference/generated/numpy.fromstring.html
