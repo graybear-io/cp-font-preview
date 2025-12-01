@@ -78,3 +78,37 @@ def get_font_info(manifest: dict[str, Any]) -> dict[str, Any]:
         "formats": manifest.get("formats", []),
         "character_count": manifest.get("character_count", 0),
     }
+
+
+def validate_manifest_for_preview(manifest: dict[str, Any], manifest_path: str) -> str | None:
+    """Validate that manifest has usable font files for preview.
+
+    Args:
+        manifest: Parsed manifest dictionary
+        manifest_path: Path to manifest file (for error messages)
+
+    Returns:
+        Error message string if validation fails, None if valid
+    """
+    # Check if generated_files list exists and is not empty
+    generated_files = manifest.get("generated_files", [])
+    if not generated_files:
+        return (
+            f"No font files found in manifest: {manifest_path}\n"
+            "  Manifest has empty generated_files list\n"
+            "  Font generation may have failed - check cp-font-gen output"
+        )
+
+    # Check if any PCF or BDF files exist on disk
+    font_paths = get_font_paths(manifest)
+    pcf_files = [f for f in font_paths if f.suffix == ".pcf" and f.exists()]
+    bdf_files = [f for f in font_paths if f.suffix == ".bdf" and f.exists()]
+
+    if not pcf_files and not bdf_files:
+        # Files listed but don't exist on disk
+        return (
+            f"Font files listed in manifest but not found on disk: {manifest_path}\n"
+            f"  Expected files in: {font_paths[0].parent if font_paths else 'unknown'}"
+        )
+
+    return None

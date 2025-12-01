@@ -124,7 +124,7 @@ class TestPreviewCommandErrors:
         result = runner.invoke(cli, ["preview", "--manifest", str(manifest)])
 
         assert result.exit_code == 1
-        assert "No PCF or BDF files found" in result.output
+        assert "not found on disk" in result.output
 
     def test_preview_font_file_not_exists(self, runner: CliRunner, tmp_path: Path):
         """Test error when font file referenced in manifest doesn't exist."""
@@ -139,7 +139,7 @@ class TestPreviewCommandErrors:
         result = runner.invoke(cli, ["preview", "--manifest", str(manifest)])
 
         assert result.exit_code == 1
-        assert "Font file not found" in result.output
+        assert "not found on disk" in result.output
 
 
 class TestPreviewCommandLogic:

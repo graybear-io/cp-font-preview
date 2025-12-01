@@ -6,7 +6,13 @@ import click
 
 from . import __version__
 from .layout import WINDOW_HEIGHT, WINDOW_WIDTH
-from .manifest import get_characters, get_font_info, get_font_paths, load_manifest
+from .manifest import (
+    get_characters,
+    get_font_info,
+    get_font_paths,
+    load_manifest,
+    validate_manifest_for_preview,
+)
 from .preview import FontPreview, preview_font_blinka
 from .watcher import FontWatcher
 
@@ -34,7 +40,7 @@ def cli():
 def preview(manifest, watch, mode, width, height):
     """Preview generated fonts in a window."""
 
-    # Load manifest
+    # Load and validate manifest
     try:
         manifest_data = load_manifest(manifest)
     except FileNotFoundError:
@@ -44,27 +50,19 @@ def preview(manifest, watch, mode, width, height):
         click.echo(f"Error loading manifest: {e}", err=True)
         sys.exit(1)
 
-    # Get font files
+    # Validate manifest has usable font files
+    validation_error = validate_manifest_for_preview(manifest_data, manifest)
+    if validation_error:
+        click.echo(f"Error: {validation_error}", err=True)
+        sys.exit(1)
+
+    # Get font files (validated to exist)
     font_paths = get_font_paths(manifest_data)
-    if not font_paths:
-        click.echo("Error: No font files found in manifest", err=True)
-        sys.exit(1)
+    pcf_files = [f for f in font_paths if f.suffix == ".pcf" and f.exists()]
+    bdf_files = [f for f in font_paths if f.suffix == ".bdf" and f.exists()]
 
-    # Use first PCF file found
-    pcf_files = [f for f in font_paths if f.suffix == ".pcf"]
-    if not pcf_files:
-        # Try BDF files
-        bdf_files = [f for f in font_paths if f.suffix == ".bdf"]
-        if not bdf_files:
-            click.echo("Error: No PCF or BDF files found", err=True)
-            sys.exit(1)
-        font_file = bdf_files[0]
-    else:
-        font_file = pcf_files[0]
-
-    if not font_file.exists():
-        click.echo(f"Error: Font file not found: {font_file}", err=True)
-        sys.exit(1)
+    # Prefer PCF over BDF
+    font_file = pcf_files[0] if pcf_files else bdf_files[0]
 
     # Get character string
     characters = get_characters(manifest_data)

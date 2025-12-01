@@ -11,6 +11,7 @@ from cp_font_preview.manifest import (
     get_font_info,
     get_font_paths,
     load_manifest,
+    validate_manifest_for_preview,
 )
 
 
@@ -179,3 +180,70 @@ class TestGetFontInfo:
         assert info["sizes"] == [16, 24, 32]
         assert info["formats"] == ["pcf", "bdf"]
         assert info["character_count"] == 100
+
+
+class TestValidateManifestForPreview:
+    """Tests for validate_manifest_for_preview function."""
+
+    def test_validate_empty_generated_files(self):
+        """Test validation fails when generated_files is empty."""
+        manifest = {"generated_files": [], "output_directory": "/tmp"}
+        error = validate_manifest_for_preview(manifest, "test.json")
+
+        assert error is not None
+        assert "No font files found" in error
+        assert "empty generated_files list" in error
+        assert "test.json" in error
+
+    def test_validate_missing_generated_files_key(self):
+        """Test validation fails when generated_files key is missing."""
+        manifest: dict[str, Any] = {"output_directory": "/tmp"}
+        error = validate_manifest_for_preview(manifest, "test.json")
+
+        assert error is not None
+        assert "No font files found" in error
+
+    def test_validate_files_dont_exist(self, tmp_path: Path):
+        """Test validation fails when files listed but don't exist on disk."""
+        manifest = {
+            "generated_files": ["font-16pt.pcf", "font-16pt.bdf"],
+            "output_directory": str(tmp_path),
+        }
+        error = validate_manifest_for_preview(manifest, "test.json")
+
+        assert error is not None
+        assert "not found on disk" in error
+        assert str(tmp_path) in error
+
+    def test_validate_success_with_pcf(self, tmp_path: Path):
+        """Test validation passes when valid PCF file exists."""
+        font_file = tmp_path / "font-16pt.pcf"
+        font_file.touch()
+
+        manifest = {"generated_files": ["font-16pt.pcf"], "output_directory": str(tmp_path)}
+        error = validate_manifest_for_preview(manifest, "test.json")
+
+        assert error is None
+
+    def test_validate_success_with_bdf(self, tmp_path: Path):
+        """Test validation passes when valid BDF file exists."""
+        font_file = tmp_path / "font-16pt.bdf"
+        font_file.touch()
+
+        manifest = {"generated_files": ["font-16pt.bdf"], "output_directory": str(tmp_path)}
+        error = validate_manifest_for_preview(manifest, "test.json")
+
+        assert error is None
+
+    def test_validate_success_with_multiple_files(self, tmp_path: Path):
+        """Test validation passes when at least one valid file exists."""
+        pcf_file = tmp_path / "font-16pt.pcf"
+        pcf_file.touch()
+
+        manifest = {
+            "generated_files": ["font-16pt.pcf", "font-24pt.pcf"],
+            "output_directory": str(tmp_path),
+        }
+        error = validate_manifest_for_preview(manifest, "test.json")
+
+        assert error is None
