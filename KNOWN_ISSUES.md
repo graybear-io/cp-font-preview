@@ -1,34 +1,41 @@
 # Known Issues
 
-## CRITICAL: Bitmap Fonts Not Rendering
+## Hybrid Pygame + Blinka Architecture Limitation
 
-**Status**: Critical blocker - core functionality broken
+**Status**: Architectural constraint requiring design decision
 
-**Issue**: Neither PCF nor BDF bitmap fonts render in the displayio/pygame window. The window displays correctly with a colored background, but text labels using bitmap fonts do not appear.
+**Issue**: Cannot create multiple pygame displays simultaneously. PyGameDisplay creates actual pygame windows, and pygame only supports one display at a time. This prevents the hybrid approach where we wanted:
+- Main pygame window for UI chrome (buttons, panels, interactions)
+- Offscreen Blinka displays for PCF/BDF font rendering
 
-**Reproduction**:
-```bash
-# Both PCF and BDF fonts fail to render
-uv run python test_bdf.py   # Shows dark gray background only
-uv run python test_simple_display.py  # Shows dark gray background only
-```
+**Root Cause**:
+- `PyGameDisplay` from Blinka creates actual pygame display windows
+- Calling `pygame.display.set_mode()` or creating new `PyGameDisplay` replaces the previous display
+- Cannot have "offscreen" Blinka rendering alongside main pygame window
 
-**Root Cause**: Incompatibility between `adafruit_bitmap_font` (PCF/BDF loading) and `blinka_displayio_pygamedisplay` (pygame rendering). The labels are created successfully and added to the display group, but do not render visually.
+**Current Workaround**: Using pure pygame with system fonts (fallback mode)
+- ✅ Full UI functionality works perfectly
+- ✅ Event-driven architecture proven
+- ✅ All interactions (click, select, resize) working
+- ❌ Does not show actual PCF/BDF bitmap rendering
 
-**Evidence**:
-- Background TileGrid renders correctly (dark gray shows)
-- Font objects load successfully (no errors)
-- Label objects create successfully (position, color, text all set)
-- Labels added to group (confirmed via len(group))
-- refresh() and auto_refresh work
-- But no text appears on screen
+**Proposed Solution**: Two-mode system
+1. **Interactive Mode** (pygame): Full UI with all interactions, uses system fonts
+2. **Blinka Mode** (displayio): Non-interactive display showing actual PCF/BDF rendering
 
-**Potential Solutions**:
-1. **File upstream issue** with Adafruit about bitmap font rendering in Blinka
-2. **Rewrite preview tool** to use pygame directly instead of displayio (bypasses the issue)
-3. **Wait for upstream fix** (timeline unknown)
+This gives users both:
+- Accurate font rendering validation (Blinka mode)
+- Interactive testing and exploration (pygame mode)
 
-**Impact**: The entire cp-font-preview tool is non-functional until this is resolved.
+**Implementation Plan**:
+- Add `--mode` CLI flag: `interactive` (default) or `blinka`
+- Interactive mode: Current pygame-based UI
+- Blinka mode: Simple non-interactive window showing font with actual rendering
+
+**Alternative Approaches Considered**:
+1. Pure Blinka: Loses complex UI interactions
+2. Single display hybrid: Would require rewriting all UI in displayio primitives
+3. Extract Blinka rendering: Not possible with current API
 
 ---
 
