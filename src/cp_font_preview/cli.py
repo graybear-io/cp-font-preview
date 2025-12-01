@@ -5,8 +5,9 @@ import sys
 import click
 
 from . import __version__
+from .layout import WINDOW_HEIGHT, WINDOW_WIDTH
 from .manifest import get_characters, get_font_info, get_font_paths, load_manifest
-from .preview import FontPreview
+from .preview import FontPreview, preview_font_blinka
 from .watcher import FontWatcher
 
 
@@ -19,10 +20,18 @@ def cli():
 
 @cli.command()
 @click.option("--manifest", "-m", required=True, help="Path to font manifest JSON file")
-@click.option("--watch", "-w", is_flag=True, help="Watch for changes and auto-reload")
-@click.option("--width", default=800, help="Window width (default: 800)")
-@click.option("--height", default=600, help="Window height (default: 600)")
-def preview(manifest, watch, width, height):
+@click.option(
+    "--watch", "-w", is_flag=True, help="Watch for changes and auto-reload (interactive mode only)"
+)
+@click.option(
+    "--mode",
+    type=click.Choice(["interactive", "blinka"]),
+    default="interactive",
+    help="Preview mode: interactive (pygame, full UI) or blinka (non-interactive, accurate rendering)",
+)
+@click.option("--width", default=WINDOW_WIDTH, help=f"Window width (default: {WINDOW_WIDTH})")
+@click.option("--height", default=WINDOW_HEIGHT, help=f"Window height (default: {WINDOW_HEIGHT})")
+def preview(manifest, watch, mode, width, height):
     """Preview generated fonts in a window."""
 
     # Load manifest
@@ -66,7 +75,21 @@ def preview(manifest, watch, width, height):
     # Get font info
     font_info = get_font_info(manifest_data)
 
-    # Create preview
+    # Blinka mode: simple non-interactive display
+    if mode == "blinka":
+        if watch:
+            click.echo("Warning: Watch mode not supported in Blinka mode", err=True)
+
+        try:
+            preview_font_blinka(str(font_file), characters, font_info, width=width, height=height)
+        except KeyboardInterrupt:
+            click.echo("\nExiting...")
+        except Exception as e:
+            click.echo(f"Error: {e}", err=True)
+            sys.exit(1)
+        return
+
+    # Interactive mode: full pygame UI
     font_preview = FontPreview(str(font_file), characters, font_info, width=width, height=height)
 
     # Setup watch mode if requested
