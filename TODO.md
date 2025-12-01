@@ -2,10 +2,10 @@
 
 ## Test Coverage Improvements
 
-**Current Status**: 53% coverage, 37 tests passing
+**Current Status**: 43 tests passing (increased from 37)
 
 ### Completed ✅
-- test_manifest.py (17 tests, 100% coverage)
+- test_manifest.py (23 tests, 100% coverage) - Added 6 validation tests
 - test_cli.py (20 tests, 80% coverage)
 
 ### Pending
